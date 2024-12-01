@@ -1,38 +1,56 @@
 resource "aws_instance" "web" {
-    ami           = "ami-064519b8c76274859"
-    instance_type = "t2.micro"
-    security_groups = [ "aws_security_group.grupo_seguridad.name" ]
+  ami                         = var.ami
+  instance_type               = var.instancia
+  subnet_id                   = aws_subnet.subnetPublica.id
+  associate_public_ip_address = true
+  security_groups             = [aws_security_group.grupo_seguridad.id]
+  key_name                    = aws_key_pair.claves.key_name
 
+  user_data = <<-EOF
+            #!/bin/bash
+            yum update -y
+            yum install -y httpd
+            systemctl start httpd
+            systemctl enable httpd
+            echo "<html><body><h1>¡Bienvenido a mi servidor web con Terraform!</h1></body></html>" > /var/www/html/index.html
+            EOF
+}
+
+resource "tls_private_key" "mi_clave" {
+  algorithm = "RSA"
+  rsa_bits  = 4096
+}
+
+resource "aws_key_pair" "claves" {
+  key_name   = "clave"
+  public_key = tls_private_key.mi_clave.public_key_openssh
+}
+
+resource "local_file" "clave_privada" {
+  content  = tls_private_key.mi_clave.private_key_pem
+  filename = "clave"
+}
+
+output "public_ip" {
+  value = aws_instance.web.public_ip
 }
 
 resource "aws_security_group" "grupo_seguridad" {
   name        = "grupo_seguridad"
-  description        = "grupo_seguridad"
-  vpc_id = aws_vpc.vpc1.id
+  description = "grupo_seguridad"
+  vpc_id      = aws_vpc.vpc1.id
 
   ingress {
-    description = "HTTPS"
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-    ipv6_cidr_blocks = [ "::/0" ]
-  }
-  ingress {
-    description = "HTTP"
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
-    ipv6_cidr_blocks = [ "::/0" ]
   }
   ingress {
-    description = "SSH"
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
-    ipv6_cidr_blocks = [ "::/0" ]
   }
 
   egress {
@@ -46,3 +64,5 @@ resource "aws_security_group" "grupo_seguridad" {
     Name = "grupo_seguridad"
   }
 }
+
+

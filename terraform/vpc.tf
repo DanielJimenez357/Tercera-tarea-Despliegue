@@ -1,4 +1,3 @@
-
 resource "aws_vpc" "vpc1" {
     cidr_block = "10.0.0.0/16"
 }
@@ -29,3 +28,5 @@ resource "aws_route_table_association" "asociamientoSubnet" {
     subnet_id = aws_subnet.subnetPublica.id
     route_table_id = aws_route_table.tablaEnrutamiento.id
 }
+
+
